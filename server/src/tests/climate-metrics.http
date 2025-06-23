@@ -1,0 +1,19 @@
+### Test Berlin Climate Metrics
+GET {{host}}:{{port}}/api/climate-metrics/Berlin?startTime={{startTime}}&endTime={{endTime}}
+Authorization: Bearer {{token}}
+
+### Test NewYork Climate Metrics
+GET {{host}}:{{port}}/api/climate-metrics/NewYork?startTime={{startTime}}&endTime={{endTime}}
+Authorization: Bearer {{token}}
+
+### Test Tokyo Climate Metrics
+GET {{host}}:{{port}}/api/climate-metrics/Tokyo?startTime={{startTime}}&endTime={{endTime}}
+Authorization: Bearer '{{token}}'
+
+### Test SaoPaulo Climate Metrics
+GET {{host}}:{{port}}/api/climate-metrics/SaoPaulo?startTime={{startTime}}&endTime={{endTime}}
+Authorization: Bearer {{token}}
+
+### Test CapeTown Climate Metrics
+GET {{host}}:{{port}}/api/climate-metrics/CapeTown?startTime={{startTime}}&endTime={{endTime}}
+Authorization: Bearer {{token}}
