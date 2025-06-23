@@ -152,11 +152,8 @@ Inovecs/
 - **Error Recovery**:
   - Implement retry logic for failed API calls and a fallback UI for no data.
 
+- **Deployment**:
+  - Set up CI/CD pipelines for automated testing and deployment using AWS and GithubActions.
+
 - **Performance Optimization**:
   - Use lazy loading for charts and implement data sampling for large datasets.
-
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-*Last updated: June 24, 2025, 01:12 AM EEST*
