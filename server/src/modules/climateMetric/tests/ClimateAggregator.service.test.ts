@@ -3,22 +3,24 @@ import { ClimateMetricAggregatorService } from '../ClimateMetricAggregator.servi
 import { ILogger } from '../../../services/Logger.service';
 import { ClimateEvent, ClimateMetric } from '../ClimateMetric.types';
 
-jest.mock('../../../services/Logger.service');
+// Remove the global 'const mockEvents = [...];' definition
 
 describe('ClimateMetricAggregatorService', () => {
     let service: ClimateMetricAggregatorService;
     let mockLogger: jest.Mocked<ILogger>;
+    let currentMockEvents: ClimateEvent[];
 
     const generateMockEvents = (count: number, startDate: string, cities: string[]): ClimateEvent[] => {
         const events: ClimateEvent[] = [];
         const start = moment(startDate).utc();
+
         for (let i = 0; i < count; i++) {
-            const timestamp = start.clone().add(i * 2, 'minutes').toISOString(); // Includes .000Z
+            const timestamp = start.clone().add(i * 2, 'minutes').toISOString();
             const city = cities[i % cities.length];
             events.push({
                 city,
                 timestamp,
-                temperature: Math.random() * 60 - 10, // -10 to 50°C
+                temperature: Math.random() * 60 - 10,
                 windspeed: Math.random() * 50,
                 winddirection: Math.random() * 360,
             });
@@ -26,50 +28,46 @@ describe('ClimateMetricAggregatorService', () => {
         return events;
     };
 
-    const mockEvents = [
-        ...generateMockEvents(24, '2025-06-24T00:00:00.000Z', ['CapeTown', 'London', 'Tokyo']), // 24 hours for today
-        // Invalid events
-        {
-            city: '',
-            timestamp: '2025-06-24T12:00:00.000Z',
-            temperature: 20,
-            windspeed: 10,
-            winddirection: 180,
-        },
-        {
-            city: 'CapeTown',
-            timestamp: '2025-06-24T12:00:00.000Z',
-            temperature: undefined as any, // Invalid temperature
-            windspeed: 10,
-            winddirection: 180,
-        },
-        {
-            city: 'London',
-            timestamp: 'invalid', // Invalid timestamp
-            temperature: 15,
-            windspeed: 20,
-            winddirection: 270,
-        },
-    ];
-
     beforeEach(() => {
         mockLogger = {
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
-        } as any;
+        } as jest.Mocked<ILogger>;
         service = new ClimateMetricAggregatorService(mockLogger);
-        // Mock current date to June 24, 2025, 00:00:00 UTC
+
         jest.spyOn(moment, 'utc').mockImplementation(
-            (input?: moment.MomentInput) => {
-                if (input) return moment(input).utc();
-                return moment('2025-06-24T00:00:00.000Z').utc();
+            (input?: moment.MomentInput): moment.Moment => {
+                const actualMoment = jest.requireActual('moment') as typeof moment;
+                if (input) return actualMoment(input).utc();
+                return actualMoment('2025-06-24T00:00:00.000Z').utc();
             }
-        ) as any;
+        );
+
+        currentMockEvents = [
+            ...generateMockEvents(24, '2025-06-24T00:00:00.000Z', ['CapeTown', 'London', 'Tokyo']),
+            {
+                city: '',
+                timestamp: '2025-06-24T12:00:00.000Z',
+                temperature: 20, windspeed: 10, winddirection: 180,
+            },
+            {
+                city: 'CapeTown',
+                timestamp: '2025-06-24T12:00:00.000Z',
+                temperature: undefined as any,
+                windspeed: 10, winddirection: 180,
+            },
+            {
+                city: 'London',
+                timestamp: 'invalid',
+                temperature: 15, windspeed: 20, winddirection: 270,
+            },
+        ];
     });
 
     afterEach(() => {
         jest.clearAllMocks();
+        jest.restoreAllMocks();
     });
 
     describe('processEvent', () => {
@@ -82,7 +80,7 @@ describe('ClimateMetricAggregatorService', () => {
                 winddirection: 294,
             };
             service.processEvent(event);
-            const candlesticks = service.getCandlesticks('CapeTown');
+            const candlesticks = service.getCandlesticksByCity('CapeTown');
             expect(candlesticks).toEqual([
                 {
                     open: 16,
@@ -127,7 +125,7 @@ describe('ClimateMetricAggregatorService', () => {
                 },
             ];
             events.forEach((event) => service.processEvent(event));
-            const candlesticks = service.getCandlesticks('CapeTown');
+            const candlesticks = service.getCandlesticksByCity('CapeTown');
             expect(candlesticks).toEqual([
                 {
                     open: 16,
@@ -145,19 +143,19 @@ describe('ClimateMetricAggregatorService', () => {
                 close: 15,
                 timestamp: '2025-06-24T02:00:00.000Z',
             });
-            expect(mockLogger.info).toHaveBeenCalledTimes(7); // 1 for each event + 1 for creation
+            expect(mockLogger.info).toHaveBeenCalledTimes(7);
         });
 
         it('should handle large dataset across multiple cities and hours', () => {
-            mockEvents.slice(0, 24).forEach((event) => service.processEvent(event)); // Only today's 24 hours
-            const candlesticksCapeTown = service.getCandlesticks('CapeTown');
-            const candlesticksLondon = service.getCandlesticks('London');
-            const candlesticksTokyo = service.getCandlesticks('Tokyo');
+            currentMockEvents.slice(0, 24).forEach((event) => service.processEvent(event));
+            const candlesticksCapeTown = service.getCandlesticksByCity('CapeTown');
+            const candlesticksLondon = service.getCandlesticksByCity('London');
+            const candlesticksTokyo = service.getCandlesticksByCity('Tokyo');
             expect(candlesticksCapeTown.length).toBeGreaterThan(0);
             expect(candlesticksLondon.length).toBeGreaterThan(0);
             expect(candlesticksTokyo.length).toBeGreaterThan(0);
             expect(candlesticksCapeTown[0].timestamp).toMatch(/^2025-06-24T\d{2}:00:00\.000Z$/);
-            expect(mockLogger.info).toHaveBeenCalledTimes(24 * 2 + 3); // 1 for processing + 1 for create/update per event
+            expect(mockLogger.info).toHaveBeenCalledTimes(24 * 2 + 3);
         });
 
         it('should handle empty city', () => {
@@ -173,7 +171,7 @@ describe('ClimateMetricAggregatorService', () => {
                 error: expect.any(String),
                 event: invalidEvent,
             });
-            const candlesticks = service.getCandlesticks('');
+            const candlesticks = service.getCandlesticksByCity('');
             expect(candlesticks).toEqual([]);
             expect(mockLogger.warn).toHaveBeenCalledWith('Invalid city parameter', { city: '' });
         });
@@ -228,7 +226,7 @@ describe('ClimateMetricAggregatorService', () => {
                 },
             ];
             events.forEach((event) => service.processEvent(event));
-            const candlesticks = service.getCandlesticks('CapeTown');
+            const candlesticks = service.getCandlesticksByCity('CapeTown');
             expect(candlesticks).toEqual([
                 {
                     open: 16,
@@ -251,13 +249,13 @@ describe('ClimateMetricAggregatorService', () => {
         });
 
         it('should return empty array for invalid city', () => {
-            const candlesticks = service.getCandlesticks('');
+            const candlesticks = service.getCandlesticksByCity('');
             expect(candlesticks).toEqual([]);
             expect(mockLogger.warn).toHaveBeenCalledWith('Invalid city parameter', { city: '' });
         });
 
         it('should return empty array for non-existent city', () => {
-            const candlesticks = service.getCandlesticks('NonExistent');
+            const candlesticks = service.getCandlesticksByCity('NonExistent');
             expect(candlesticks).toEqual([]);
             expect(mockLogger.warn).toHaveBeenCalledWith('No candlesticks found for city', {
                 city: 'NonExistent',
@@ -266,7 +264,6 @@ describe('ClimateMetricAggregatorService', () => {
     });
 });
 
-// Custom matcher for sorting
 expect.extend({
     toBeSortedBy(received: any[], comparator: (a: any, b: any) => number) {
         const sorted = [...received].sort(comparator);

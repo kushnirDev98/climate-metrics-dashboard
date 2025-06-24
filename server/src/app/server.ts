@@ -1,4 +1,3 @@
-// src/app/server.ts
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import swagger from '@fastify/swagger';

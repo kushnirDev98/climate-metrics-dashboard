@@ -56,7 +56,7 @@ export class ClimateMetricAggregatorService {
         }
     }
 
-    getCandlesticks(city: string): ClimateMetric[] {
+    getCandlesticksByCity(city: string): ClimateMetric[] {
         if (!city || typeof city !== 'string') {
             this.logger.warn('Invalid city parameter', { city });
             return [];

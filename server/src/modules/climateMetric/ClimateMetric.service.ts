@@ -14,6 +14,6 @@ export class ClimateMetricService {
     }
 
     getCandlesticks(city: string) {
-        return this.aggregator.getCandlesticks(city);
+        return this.aggregator.getCandlesticksByCity(city);
     }
 }

@@ -70,7 +70,7 @@ const App = () => {
                 </select>
             </div>
             {error && <ErrorMessage message={error} />}
-            {chosenCity && !loading ? <ClimateMetricsChart city={chosenCity} data={metricsData} /> : null}
+            {!error && chosenCity && !loading ? <ClimateMetricsChart city={chosenCity} data={metricsData} /> : null}
             {loading && (
                 <div className="text-center text-blue-600 font-semibold">Loading data...</div>
             )}

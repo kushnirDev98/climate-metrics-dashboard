@@ -5,19 +5,38 @@ import { ClimateMetricAggregatorService } from './modules/climateMetric/ClimateM
 import { ClimateMetricService } from './modules/climateMetric/ClimateMetric.service';
 
 async function start() {
-    const configService = ConfigService.initialize();
     const logger = new PinoLogger();
-    const aggregator = new ClimateMetricAggregatorService(logger);
-    const climateMetricService = new ClimateMetricService(logger, aggregator);
+    try {
+        const configService = ConfigService.initialize();
+        const port = configService.get('PORT') || 3001;
 
-    const server = await createServer({ logger, configService, climateMetricService });
+        const climateMetricAggregatorService = new ClimateMetricAggregatorService(logger);
+        const climateMetricService = new ClimateMetricService(logger, climateMetricAggregatorService);
 
-    const port = configService.get('PORT') || 3333;
-    await server.listen({ port });
-    logger.info(`Server is running on port ${port}`);
+        const server = await createServer({ logger, configService, climateMetricService });
+
+        server.setErrorHandler((error, request, reply) => {
+            if (reply.statusCode >= 500) {
+                logger.error(`Request error: ${error.message}`, {
+                    requestId: request.id,
+                    url: request.url,
+                    method: request.method,
+                });
+                reply.status(500).send({
+                    error: 'Internal Server Error',
+                    message: error.message,
+                    statusCode: 500,
+                });
+            }
+        });
+
+        await server.listen({ port });
+        logger.info(`Server is running on port ${port}`);
+    } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : JSON.stringify(err);
+        logger.error(`Failed to start server ${errorMessage}`);
+        process.exit(1);
+    }
 }
 
-start().catch((err) => {
-    console.error('Failed to start server:', err);
-    process.exit(1);
-});
+start();
