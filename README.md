@@ -109,7 +109,7 @@ climate-metrics-dashboard/
 ## Installation
 
 ### Prerequisites
-- **Node.js**: v18 or later
+- **Node.js**: v22 or later
 - **pnpm**: v8 or later (recommended for package management)
 - **AWS CLI**: Configured with credentials for S3 access
 - **GitHub Account**: For setting up GitHub Actions
